@@ -17,11 +17,19 @@
 //   2. clr_* is only asserted or released while arm is low. A herald edge
 //      that collides with CLR release then clocks CE=0 and cannot change Q,
 //      so a recovery/removal violation is harmless.
-//   3. The only real race is a herald edge inside the setup/hold window of
-//      the arm rising edge at CE. Q may then go metastable and resolve
-//      either way. Path B treats the synchronized value of `fired` as the
-//      truth, so both paths agree on whether the attempt started. The
-//      immediate outputs may show an extra settling delay in that rare case.
+//   3. The remaining race is a herald edge inside the setup/hold window of
+//      the arm rising edge at CE. Each flop may then go metastable and
+//      resolve either way, and possibly with extra settling delay.
+//      - Synchronous state: consistent. Path B decides whether the attempt
+//        started only from the synchronized value of `fired`, so sequencer,
+//        counters, time stamps and scheduled pulses follow one decision.
+//      - Physical Path A outputs: NOT guaranteed consistent. The three kill
+//        flops and `fired` sample arm independently, and arm reaches them
+//        with routed skew, so one herald can set some of them and not
+//        others. A beam can then stay on during an accepted attempt, or
+//        switch off without one until a later cycle clears it. Nothing here
+//        or in Path B detects this. Open hardware issue (docs/05 §3.3); the
+//        proposed single-master-flip-flop fix is not implemented.
 //   4. Minimum herald high/low time at the flop is the device clock minimum
 //      pulse width (7-series: see DS181 Tmpw). Shorter pulses are not
 //      guaranteed to set the flop. Path B flags fired-without-edge events.
