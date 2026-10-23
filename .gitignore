@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------- build output
+# simulation, synthesis, place & route, bitstreams (all under build/)
+/build/
+obj_dir/
+*.vcd
+*.fst
+*.wlf
+# openXC7 / nextpnr / Project X-Ray intermediates, if produced outside build/
+*.fasm
+*.frames
+*.bba
+*.bit
+*.bin
+*.sdf
+# Vivado
+.Xil/
+*.jou
+vivado*.log
+vivado_*.str
+*.dcp
+webtalk*
+
+# ---------------------------------------------------------------- figures
+# LuaLaTeX intermediates; the generated SVGs in docs/figures/ ARE committed
+docs/figures/build/
+docs/figures/pdf/
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
+*.toc
+*.xdv
+
+# ---------------------------------------------------------------- environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+*.local
+# downloaded toolchains belong outside the repository (default ~/opt/openxc7)
+/opt/
+/toolchain/
+
+# ---------------------------------------------------------------- editors / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~

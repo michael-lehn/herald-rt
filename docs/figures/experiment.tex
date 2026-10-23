@@ -1,0 +1,72 @@
+% SPDX-License-Identifier: CC-BY-4.0
+% Figure 1 - the heralded single-photon storage experiment (simplified).
+% Original illustration based on the setup described in Buser et al. 2022,
+% arXiv:2204.12389, Sections III-V and Fig. 2. Not a copy of any published figure.
+\documentclass[tikz, border=0pt]{standalone}
+\input{styles}
+
+\begin{document}
+\begin{tikzpicture}[white page, node distance = 6mm]
+
+  % ------------------------------------------------------------ source row
+  \node[device, minimum width = 22mm] (pump) at (0, 0) {Pump laser\\\SI{404}{nm}};
+  \node[smallblock, minimum width = 15mm] (pc) at (3.0, 0) {Pockels\\cell};
+  \node[block, minimum width = 24mm] (spdc) at (6.0, 0) {Photon-pair source\\{\footnotesize SPDC in ppKTP cavity}};
+  \node[draw = ink, line width = 0.7pt, fill = white, minimum size = 6mm, rotate = 45,
+        inner sep = 0pt] (pbs) at (8.8, 0) {};
+  \draw[ink, line width = 0.5pt] (pbs.west) -- (pbs.east);
+  \node[tag, above = 2.5mm of pbs] {PBS};
+
+  \draw[pump light] (pump) -- (pc);
+  \draw[pump light] (pc) -- (spdc);
+  \draw[optical] (spdc) -- (pbs);
+
+  % fibre delay (signal photon)
+  \coordinate (coilc) at (11.25, 0);
+  \foreach \r in {0.30, 0.36, 0.42} \draw[optical nohead, line width = 0.9pt] (coilc) circle (\r);
+  \node[note, above = 5.5mm of coilc] {fibre delay \SI{60}{m}\\$\approx$\,\SI{270}{ns}};
+  \draw[optical] (pbs) -- node[above, tag, pos = 0.42] {signal \SI{795}{nm}} ($(coilc) + (-0.45, 0)$);
+
+  \node[block, minimum width = 28mm, minimum height = 13mm, fill = opticallight!45] (mem)
+        at (15.0, 0) {Quantum memory\\{\footnotesize warm $^{87}$Rb vapour cell}};
+  \draw[optical] ($(coilc) + (0.45, 0)$) -- (mem);
+
+  \node[smallblock, minimum width = 21mm] (det) at (19.45, 0) {Filters +\\single-photon\\detectors};
+  \draw[optical] (mem) -- node[above, tag] {retrieved} (det);
+
+  % herald branch
+  \node[smallblock, minimum width = 22mm] (spad) at (8.8, -2.25) {Herald detector\\{\scriptsize SPAD}};
+  \draw[optical] (pbs) -- node[right, tag, pos = 0.5] {herald (idler) \SI{822}{nm}} (spad);
+
+  % memory drive optics
+  \node[smallblock, minimum width = 27mm] (soa) at (13.55, -2.25) {Pump \& repump lasers\\{\scriptsize switched by SOAs}};
+  \node[smallblock, minimum width = 27mm] (eom) at (16.75, -2.25) {Control laser\\{\scriptsize EOM $\rightarrow$ amplifier}};
+  \draw[optical] (soa.north -| 14.25, 0) -- node[left, tag, align = right] {state\\preparation} (mem.south -| 14.25, 0);
+  \draw[optical] (eom.north -| 15.85, 0) -- node[right, tag, align = left] {control\\pulses} (mem.south -| 15.85, 0);
+
+  % ------------------------------------------------------------ electronics
+  \node[block, minimum width = 158mm, minimum height = 10mm, fill = syncfill, draw = syncline,
+        anchor = north] (ctl) at (9.15, -3.65)
+        {\textbf{Control electronics} \quad {\footnotesize herald-triggered sequencing, delayed pulse triggers, timestamps}};
+
+  \draw[elec] (spad.south) -- node[right, tag, pos = 0.45] {herald pulse, $t = 0$} (spad.south |- ctl.north);
+  \draw[ctrl] (ctl.north -| pc.south) -- node[right, tag, pos = 0.5, text = ctrl] {source on/off} (pc.south);
+  \draw[ctrl] (ctl.north -| soa.south) -- node[right, tag, pos = 0.5, text = ctrl] {on/off} (soa.south);
+  \draw[ctrl] (ctl.north -| eom.south) -- node[right, tag, pos = 0.5, text = ctrl] {pulse triggers} (eom.south);
+  \node[smallblock, minimum width = 21mm, anchor = north] (tdc) at (19.45, -3.65) {Time tagger\\{\scriptsize data analysis}};
+  \draw[elec] (det.south) -- node[right, tag, align = left] {photon\\events} (tdc.north);
+  \draw[elec] (ctl.east |- tdc.west) -- node[above, tag] {herald} (tdc.west);
+
+  % ------------------------------------------------------------ captions in figure
+  \node[note, anchor = north, text width = 50mm] at ($(mem.north) + (0, 1.25)$)
+       {store with one control pulse,\\retrieve with a second one};
+
+  % ------------------------------------------------------------ legend
+  \begin{scope}[shift = {(1.6, -5.55)}]
+    \draw[optical] (0, 0) -- (1.0, 0) node[right, tag, text = ink] {optical path};
+    \draw[pump light] (3.6, 0) -- (4.6, 0) node[right, tag, text = ink] {\SI{404}{nm} pump light};
+    \draw[elec] (7.9, 0) -- (8.9, 0) node[right, tag, text = ink] {electrical event signal};
+    \draw[ctrl] (12.6, 0) -- (13.6, 0) node[right, tag, text = ink] {control output};
+  \end{scope}
+\end{tikzpicture}
+\end{document}

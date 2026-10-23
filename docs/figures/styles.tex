@@ -1,0 +1,96 @@
+% SPDX-License-Identifier: CC-BY-4.0
+% styles.tex - shared typography, colours and TikZ styles for all HeraldRT figures.
+%
+% Conventions used in every figure
+%   optical path        red, solid, 1.2pt, open arrow head
+%   electrical event    blue, solid, 0.9pt (detector pulses, herald)
+%   control output      green, dashed, 0.9pt (electronics -> actuators)
+%   host / config       grey, dotted
+%   implemented block   solid outline     proposed block   dashed grey outline
+%   asynchronous domain light amber fill  synchronous domain light blue fill
+
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\setmainfont{FiraSans}[
+  Extension = .otf, UprightFont = *-Book, BoldFont = *-SemiBold,
+  ItalicFont = *-BookItalic, BoldItalicFont = *-SemiBoldItalic]
+\setsansfont{FiraSans}[
+  Extension = .otf, UprightFont = *-Book, BoldFont = *-SemiBold,
+  ItalicFont = *-BookItalic, BoldItalicFont = *-SemiBoldItalic]
+\setmathfont{FiraMath-Regular.otf}
+\setmonofont{FiraMono}[Extension = .otf, UprightFont = *-Regular, BoldFont = *-Medium,
+  Scale = 0.92]
+\renewcommand{\familydefault}{\sfdefault}
+
+\usepackage[detect-all]{siunitx}
+\sisetup{range-phrase = --, range-units = single, per-mode = symbol}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc, fit, backgrounds,
+  decorations.pathmorphing, decorations.markings, shapes.geometric, shapes.misc}
+
+% layer for domain shading: above the white page, below blocks and wires
+\pgfdeclarelayer{board}
+\pgfdeclarelayer{domains}
+\pgfsetlayers{background, board, domains, main}
+
+% reproducible PDF (no creation date / ID differences between builds)
+\pdfvariable suppressoptionalinfo 1023
+
+% ------------------------------------------------------------------ colours
+\definecolor{ink}{HTML}{1B2631}
+\definecolor{optical}{HTML}{B03A2E}
+\definecolor{opticallight}{HTML}{F2D7D5}
+\definecolor{pumpviolet}{HTML}{6C3483}
+\definecolor{elec}{HTML}{1F4E79}
+\definecolor{ctrl}{HTML}{1E7B4A}
+\definecolor{host}{HTML}{6E7B85}
+\definecolor{asyncfill}{HTML}{FDF2E3}
+\definecolor{asyncline}{HTML}{C07A1E}
+\definecolor{syncfill}{HTML}{EAF2FA}
+\definecolor{syncline}{HTML}{4F7FAF}
+\definecolor{boxfill}{HTML}{FFFFFF}
+\definecolor{muted}{HTML}{8A949C}
+\definecolor{lat}{HTML}{C0392B}
+
+\colorlet{proposed}{muted}
+
+% ------------------------------------------------------------------ styles
+\tikzset{
+  every picture/.style = {line join = round, line cap = round, font = \small,
+    text = ink, >={Stealth[length=2.2mm, width=1.6mm]}},
+  % white page so the SVG stays readable in GitHub's dark mode
+  white page/.style = {show background rectangle,
+    background rectangle/.style = {fill = white, draw = none},
+    inner frame xsep = 4mm, inner frame ysep = 3.5mm},
+  % blocks
+  block/.style = {draw = ink, line width = 0.7pt, fill = boxfill, rounded corners = 1.5pt,
+    align = center, inner sep = 4pt, minimum height = 9mm},
+  smallblock/.style = {block, font = \footnotesize, minimum height = 7mm, inner sep = 3pt},
+  proposedblock/.style = {block, draw = proposed, dash pattern = on 3pt off 2pt,
+    text = proposed, fill = white},
+  device/.style = {block, fill = black!3},
+  domain async/.style = {draw = asyncline, fill = asyncfill, line width = 0.6pt,
+    rounded corners = 3pt, inner sep = 3.5mm},
+  domain sync/.style = {draw = syncline, fill = syncfill, line width = 0.6pt,
+    rounded corners = 3pt, inner sep = 3.5mm},
+  board/.style = {draw = ink!70, line width = 0.7pt, rounded corners = 4pt, inner sep = 4mm},
+  domain label/.style = {font = \footnotesize\bfseries, align = left},
+  note/.style = {font = \footnotesize, text = ink!80, align = center},
+  tag/.style = {font = \scriptsize, text = ink!70},
+  % signals
+  optical/.style = {draw = optical, line width = 1.2pt, -{Stealth[length=2.6mm, width=2mm]}},
+  optical nohead/.style = {draw = optical, line width = 1.2pt},
+  pump light/.style = {draw = pumpviolet, line width = 1.2pt, -{Stealth[length=2.6mm, width=2mm]}},
+  elec/.style = {draw = elec, line width = 0.9pt, ->},
+  ctrl/.style = {draw = ctrl, line width = 0.9pt, dash pattern = on 3.5pt off 2pt, ->},
+  hostlink/.style = {draw = host, line width = 0.8pt, dash pattern = on 1pt off 1.6pt, <->},
+  latency/.style = {circle, fill = lat, text = white, font = \scriptsize\bfseries,
+    inner sep = 0.6pt, minimum size = 3.9mm},
+}
+
+% value-class tags used in the timing figure
+\newcommand{\clsP}{\textsuperscript{\textcolor{optical}{\bfseries P}}}
+\newcommand{\clsD}{\textsuperscript{\textcolor{asyncline}{\bfseries D}}}
+\newcommand{\clsC}{\textsuperscript{\textcolor{ctrl}{\bfseries C}}}
+\newcommand{\clsA}{\textsuperscript{\textcolor{host}{\bfseries A}}}

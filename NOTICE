@@ -1,0 +1,46 @@
+HeraldRT - Event-Driven FPGA Control for Quantum Experiments
+Copyright 2026 Michael Lehn
+
+This repository uses two licences.
+
+1. Apache License 2.0 (full text: LICENSE)
+   Source code, hardware description and build infrastructure:
+     rtl/            SystemVerilog RTL, including rtl/vendor/
+     sim/            simulation models
+     tb/             testbench
+     constr/         FPGA constraints
+     scripts/        build, analysis and programming scripts
+     tools/          host software
+     docker/         container build files
+     Makefile, docs/figures/Makefile, docs/figures/normalize_svg.py,
+     .gitignore
+
+2. Creative Commons Attribution 4.0 International, CC BY 4.0
+   (full text: LICENSE-DOCS)
+   Documentation and original figures:
+     README.md
+     docs/*.md
+     docs/figures/*.tex   (TikZ figure sources, including styles.tex)
+     docs/figures/*.svg   (figures generated from those sources)
+
+Source files carry an SPDX-License-Identifier line that states which of the
+two licences applies.
+
+Third-party material and acknowledgements
+-----------------------------------------
+- The figures contain glyph outlines of the Fira Sans and Fira Math typefaces
+  (SIL Open Font License 1.1). No font files are included in this repository.
+- Pin assignments in constr/kasli_v2_0.xdc were derived from the Sinara Kasli
+  v2.0 platform description in the migen project (BSD 2-Clause licence) and
+  checked against the Kasli v2.0.2 schematic. No migen code is included.
+- The udev stub in docker/vivado/ follows a workaround described by the
+  vivado-docker project; the code in this repository is an original
+  implementation.
+- The experiment modelled here is described in G. Buser et al.,
+  "Single-Photon Storage in a Ground-State Vapor Cell Quantum Memory",
+  arXiv:2204.12389 (2022). The paper is referenced, not redistributed; all
+  figures are original drawings.
+
+HeraldRT is an independent project. It is not affiliated with or endorsed by
+the authors of the reference paper, their institutions, M-Labs, the Sinara
+project, AMD, or any other organisation mentioned in this repository.

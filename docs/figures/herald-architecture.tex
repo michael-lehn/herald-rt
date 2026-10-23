@@ -1,0 +1,135 @@
+% SPDX-License-Identifier: CC-BY-4.0
+% Figure 3 - HeraldRT architecture as implemented in rtl/ (qm_top on Kasli 2.0).
+% Solid blocks exist in the RTL; dashed grey blocks are proposals.
+% Grid: columns x = 8.4 / 11.8 / 15.4 / 18.3, rows y = 3.4 (Path A), 1.7, -1.6, -3.4, -5.3.
+\documentclass[tikz, border=0pt]{standalone}
+\input{styles}
+
+\begin{document}
+\begin{tikzpicture}[white page]
+  \tikzset{
+    rtl/.style  = {smallblock, minimum width = 25mm, minimum height = 11mm},
+    wide/.style = {rtl, minimum width = 33mm, minimum height = 15mm},
+    prim/.style = {smallblock, minimum width = 15mm, minimum height = 8mm, fill = black!4},
+    ext/.style  = {smallblock, minimum width = 24mm, minimum height = 11mm, fill = black!3},
+    file/.style = {font = \ttfamily\scriptsize, text = ink!55},
+    cfg/.style  = {draw = host, line width = 0.7pt, dash pattern = on 1pt off 1.6pt, ->},
+  }
+
+  % ============================================================ input side
+  \node[ext] (spad)  at (-2.7, 0) {Herald SPAD\\{\scriptsize TTL pulse}};
+  \node[ext] (dioin) at (0.3, 0)  {DIO-MCX ch0\\{\scriptsize TTL $\rightarrow$ M-LVDS}};
+  \node[prim] (ibuf) at (3.65, 0) {IBUFDS\\{\scriptsize LVDS\_25}};
+  \node[prim, minimum height = 13mm] (iser) at (5.75, 0) {ISERDES\\{\scriptsize 8 samples}\\[-2pt]{\scriptsize per cycle}};
+  \draw[elec] (spad) -- (dioin);
+  \draw[elec] (dioin) -- node[above, tag, pos = 0.4] {EEM0} (ibuf);
+  \draw[elec] (ibuf) -- (iser);
+
+  % ============================================================ Path A (herald domain)
+  \node[prim] (bufg) at (8.4, 3.4) {BUFG};
+  \node[wide] (kill) at (11.8, 3.4)
+       {kill flops $\times 3$, fired\\{\scriptsize FDCE: C = herald, CE = arm}\\[-1pt]{\scriptsize CLR = clear}};
+  \node[rtl, minimum width = 31mm] (olut) at (15.55, 3.4)
+       {output LUTs\\{\scriptsize $\mathit{pol} \oplus (\mathit{on} \wedge \neg(\mathit{kill} \wedge \mathit{imm}))$}};
+  \node[prim] (obuf) at (18.45, 3.4) {OBUFDS};
+  \node[rtl, minimum height = 9mm] (gray) at (8.4, 1.6) {edge counter\\{\scriptsize Gray code, 4 bit}};
+
+  \draw[elec] (iser.north) |- node[pos = 0.3, left, tag, align = right] {herald\\(O bypass)} (bufg.west);
+  \draw[elec] (bufg) -- (kill);
+  \draw[elec] (bufg) -- (gray);
+  \draw[elec, line width = 1.25pt] (kill) -- (olut);
+  \draw[elec, line width = 1.25pt] (olut) -- (obuf);
+
+  \coordinate (Atop) at (8.0, 5.05);
+  \begin{pgfonlayer}{domains}
+    \node[domain async, fit = (bufg) (kill) (olut) (obuf) (gray) (Atop), inner ysep = 3.5mm,
+          inner xsep = 4mm] (pathA) {};
+  \end{pgfonlayer}
+  \node[domain label, anchor = north west, text = asyncline] at ($(pathA.north west) + (0.05, -0.08)$)
+       {Path A -- direct reaction\\[-1pt]{\scriptsize\mdseries herald is the clock: no clk\_sys edge, no CPU}};
+  \node[file, anchor = south east] at ($(pathA.south east) + (-0.1, 0.08)$) {qm\_herald\_latch.sv};
+
+  % ============================================================ Path B (clk_sys domain)
+  \node[rtl]  (cap)   at (8.4, -1.6)  {edge capture\\{\scriptsize \SI{1}{ns} time stamps}};
+  \node[rtl]  (sync)  at (11.8, -1.45) {synchronizers\\{\scriptsize 3 flip-flops each}};
+  \node[wide] (seq)   at (11.8, -3.55)
+       {sequencer\\{\scriptsize arm / clear, accept / reject}\\[-1pt]{\scriptsize preparation, restore}};
+  \node[rtl]  (pulse) at (15.55, -3.55) {pulse units $\times 2$\\{\scriptsize \SI{1}{ns} grid}};
+  \node[prim] (oser)  at (18.45, -3.55) {OSERDES\\{\scriptsize CTRL\_A/B}};
+  \node[rtl]  (regs)  at (11.8, -5.55) {registers, counters\\{\scriptsize time-stamp FIFO}};
+  \node[rtl, minimum width = 22mm] (uart) at (8.4, -5.55) {UART bridge\\{\scriptsize \SI{1}{Mbaud}}};
+
+  \draw[elec] (iser.south) |- node[pos = 0.3, left, tag, align = right] {samples\\Q[7:0]} (cap.west);
+  \draw[elec] (cap.south) |- (seq.west);
+  \draw[elec] (sync) -- (seq);
+  \draw[elec] (seq) -- node[above, tag] {start} (pulse);
+  \draw[elec] (pulse) -- (oser);
+  \draw[elec, <->] (seq) -- (regs);
+  \draw[elec, <->] (regs) -- (uart);
+
+  \coordinate (Bbot) at (8.0, -7.0);
+  \begin{pgfonlayer}{domains}
+    \node[domain sync, fit = (cap) (sync) (seq) (pulse) (oser) (regs) (uart) (Bbot), inner ysep = 3.5mm,
+          inner xsep = 4mm] (pathB) {};
+  \end{pgfonlayer}
+  \node[domain label, anchor = south west, text = syncline] at ($(pathB.south west) + (0.05, 0.08)$)
+       {Path B -- acquisition and sequencing\\[-1pt]{\scriptsize\mdseries clk\_sys \SI{125}{MHz}; input and output serdes at \SI{1}{GS/s}}};
+
+  % ============================================================ domain crossings
+  \draw[elec] ($(kill.south west) + (1.25, 0)$) -- node[right, tag, pos = 0.42] {kill, fired}
+              ($(sync.north west) + (0.85, 0)$);
+  \draw[elec] (gray.east) -| node[pos = 0.75, left, tag] {count} ($(sync.north west) + (0.25, 0)$);
+  \draw[ctrl] ($(seq.north east) + (-0.25, 0)$) -- node[right, tag, text = ctrl, pos = 0.58, align = left]
+              {arm,\\clear} ($(kill.south east) + (-0.25, 0)$);
+  \draw[cfg]  (seq.east |- 0, -2.95) -- (14.15, -2.95) -- node[right, tag, text = host, pos = 0.5, align = left]
+              {on, pol,\\imm} (14.15, 2.85);
+
+  % ============================================================ clocking
+  \node[prim, minimum width = 24mm] (mmcm) at (4.7, -3.55) {MMCM\\{\scriptsize \SI{125}{MHz} \& \SI{500}{MHz}}};
+  \node[tag, below = 0.6mm of mmcm, align = center] {reference: Si549\\\SI{125}{MHz} (on board)};
+
+  % ============================================================ FPGA outline
+  \coordinate (Ftop) at (3.0, 6.0);
+  \begin{pgfonlayer}{board}
+    \node[board, fit = (ibuf) (iser) (pathA) (pathB) (mmcm) (Ftop), inner xsep = 3.5mm, inner ysep = 2.5mm,
+          draw = ink!50] (fpga) {};
+  \end{pgfonlayer}
+  \node[domain label, anchor = north west, text = ink!75] at ($(fpga.north west) + (0.05, -0.08)$)
+       {Kasli 2.0 -- Artix-7 XC7A100T\\[-1pt]{\scriptsize\mdseries dedicated HeraldRT bitstream}};
+
+  % ============================================================ outputs
+  \node[ext] (dioA) at (21.45, 3.4)   {DIO-MCX ch4--7\\{\scriptsize M-LVDS $\rightarrow$ TTL}};
+  \node[ext] (dioB) at (21.45, -3.55) {DIO-MCX ch8--9\\{\scriptsize M-LVDS $\rightarrow$ TTL}};
+  \draw[ctrl] (obuf) -- (dioA);
+  \draw[ctrl] (oser) -- (dioB);
+
+  \node[ext, minimum width = 31mm, anchor = west] (eqA) at (23.35, 4.25) {pump \& repump SOAs,\\{\scriptsize Pockels cell (source)}};
+  \node[ext, minimum width = 31mm, anchor = west] (fwd) at (23.35, 2.55) {HERALD\_FWD\\{\scriptsize to external DDG (Tier 0)}};
+  \node[ext, minimum width = 31mm, anchor = west] (eqB) at (23.35, -3.55) {pulse generator\\{\scriptsize $\rightarrow$ EOM control pulses}};
+  \draw[ctrl] (dioA.east) -- ++(0.25, 0) |- (eqA.west);
+  \draw[ctrl] (dioA.east) -- ++(0.25, 0) |- (fwd.west);
+  \draw[ctrl] (dioB) -- (eqB);
+  \node[proposedblock, font = \footnotesize, minimum width = 31mm, anchor = west] (tier2) at (23.35, -5.55)
+       {Tier 2 fine timing\\{\scriptsize TDC + delay line (proposed)}};
+
+  % ============================================================ host
+  \node[ext] (hostpc) at (-2.7, -5.55) {Host PC\\{\scriptsize configure, monitor}};
+  \draw[hostlink] (hostpc) -- node[above, tag, pos = 0.28] {USB (FT4232H)} (uart);
+  \node[proposedblock, font = \footnotesize, minimum width = 24mm] (artiq) at (-2.7, -3.55)
+       {ARTIQ / RTIO\\{\scriptsize integration (proposed)}};
+  \draw[draw = proposed, line width = 0.7pt, dash pattern = on 3pt off 2pt, ->] (artiq) -- (hostpc);
+
+  % ============================================================ legend
+  \begin{scope}[shift = {(-3.8, -8.25)}]
+    \draw[elec] (0, 0) -- (0.9, 0) node[right, tag, text = ink] {logic / electrical signal};
+    \draw[ctrl] (4.6, 0) -- (5.5, 0) node[right, tag, text = ink] {control output};
+    \draw[cfg]  (8.3, 0) -- (9.2, 0) node[right, tag, text = ink] {static configuration};
+    \node[draw = asyncline, fill = asyncfill, minimum width = 6mm, minimum height = 3.5mm] at (12.8, 0) {};
+    \node[right, tag] at (13.15, 0) {herald (asynchronous) domain};
+    \node[draw = syncline, fill = syncfill, minimum width = 6mm, minimum height = 3.5mm] at (17.9, 0) {};
+    \node[right, tag] at (18.25, 0) {clk\_sys (synchronous) domain};
+    \node[proposedblock, minimum width = 6mm, minimum height = 3.5mm, inner sep = 0pt] at (23.0, 0) {};
+    \node[right, tag] at (23.35, 0) {proposed, not implemented};
+  \end{scope}
+\end{tikzpicture}
+\end{document}

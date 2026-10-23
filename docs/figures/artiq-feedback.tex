@@ -1,0 +1,71 @@
+% SPDX-License-Identifier: CC-BY-4.0
+% Figure 2 - representative CPU-mediated feedback in an ARTIQ/Sinara system.
+% This is one way to react to an external event (input event -> kernel ->
+% new timestamped output). Pre-scheduled RTIO outputs do not use this loop.
+% Numbered markers are latency contributors, not measured values.
+\documentclass[tikz, border=0pt]{standalone}
+\input{styles}
+
+\begin{document}
+\begin{tikzpicture}[white page]
+  \tikzset{stage/.style = {smallblock, minimum width = 19mm, minimum height = 11mm}}
+
+  % ------------------------------------------------------------------ nodes
+  \node[stage, fill = black!3] (det)    at (-0.9, 0) {Detector\\{\scriptsize SPAD, TTL pulse}};
+  \node[stage]                 (dioin)  at (1.85, 0) {Sinara DIO\\{\scriptsize input buffer}};
+  \node[stage]                 (inphy)  at (5.7, 0) {RTIO input\\PHY\\{\scriptsize serdes, timestamp}};
+  \node[stage]                 (infifo) at (8.1, 0) {input\\FIFO};
+  \node[block, minimum width = 26mm, minimum height = 12mm] (cpu) at (10.6, 2.35)
+        {CPU (VexRiscv)\\{\scriptsize ARTIQ kernel}};
+  \node[stage]                 (outfifo) at (13.1, 0) {output FIFO\\{\scriptsize timestamped}\\[-2pt]{\scriptsize events}};
+  \node[stage]                 (outphy) at (15.5, 0) {RTIO output\\PHY};
+  \node[stage]                 (dioout) at (19.35, 0) {Sinara DIO /\\Urukul DDS};
+  \node[stage, fill = black!3] (equip)  at (22.1, 0) {Optical\\equipment\\{\scriptsize SOA, EOM, PC}};
+
+  % Kasli region
+  \begin{pgfonlayer}{domains}
+    \node[domain sync, fit = (inphy) (infifo) (cpu) (outfifo) (outphy), inner ysep = 4mm,
+          inner xsep = 3.5mm] (kasli) {};
+  \end{pgfonlayer}
+  \node[domain label, anchor = north west, text = syncline] at (kasli.north west)
+       {\,Kasli FPGA\\[-1pt]{\scriptsize\mdseries\, ARTIQ gateware + soft CPU}};
+  \node[tag, align = center] at ($(infifo)!0.5!(outfifo)$) {RTIO core\\\SI{125}{MHz} clock};
+
+  % ------------------------------------------------------------------ links
+  \draw[elec] (det) -- (dioin);
+  \draw[elec] (dioin) -- node[above, tag, pos = 0.4] {EEM} node[below, tag, pos = 0.4] {LVDS} (inphy);
+  \draw[elec] (inphy) -- (infifo);
+  \draw[elec] (infifo.north) |- node[pos = 0.25, left, tag, align = right] {read\\event} (cpu.west);
+  \draw[elec] (cpu.east) -| node[pos = 0.75, right, tag, align = left] {write\\event} (outfifo.north);
+  \draw[elec] (outfifo) -- (outphy);
+  \draw[elec] (outphy) -- node[above, tag, pos = 0.6] {EEM} node[below, tag, pos = 0.6] {LVDS} (dioout);
+  \draw[ctrl] (dioout) -- (equip);
+
+  % latency markers
+  \node[latency] at ($(det.east)!0.5!(inphy.west) + (0, 0.75)$) {1};
+  \node[latency] at ($(inphy.north) + (0.55, 0.3)$) {2};
+  \node[latency] at ($(cpu.north west) + (-0.05, 0.05)$) {3};
+  \node[latency] at ($(cpu.north east) + (0.05, 0.05)$) {4};
+  \node[latency] at ($(outfifo.north east) + (0.05, 0.05)$) {5};
+  \node[latency] at ($(outphy.east)!0.5!(equip.west) + (0, 0.75)$) {6};
+
+  % the alternative (HeraldRT) - drawn for orientation only
+  \draw[draw = asyncline, line width = 0.9pt, dash pattern = on 4pt off 2.5pt, ->]
+       ($(inphy.south) + (0.2, 0)$) -- ++(0, -1.25) -| node[pos = 0.25, below, tag, text = asyncline]
+       {HeraldRT: direct gateware reaction, no CPU (Fig.\,3)} ($(outphy.south) + (-0.2, 0)$);
+
+  % ------------------------------------------------------------------ key
+  \node[anchor = north west, text width = 205mm, font = \footnotesize, align = left]
+       at ($(det.south west) + (0, -1.95)$) {%
+    \begin{tabular}{@{}l@{\;}p{90mm}@{\quad}l@{\;}p{90mm}@{}}
+      \tikz\node[latency]{1}; & input buffering and the EEM LVDS link &
+      \tikz\node[latency]{4}; & kernel computation and decision \\[2pt]
+      \tikz\node[latency]{2}; & sampling on the RTIO clock grid (time stamp resolution) &
+      \tikz\node[latency]{5}; & new output must carry a future time stamp (slack), output FIFO \\[2pt]
+      \tikz\node[latency]{3}; & kernel obtains the event (blocking read of the input FIFO) &
+      \tikz\node[latency]{6}; & output buffers, EEM link, device response (e.g.\ DDS update) \\
+    \end{tabular}\\[4pt]
+    {\color{ink!75}Representative CPU-mediated feedback scenario. Outputs scheduled in advance do not
+    pass through this loop. Markers identify contributions; no values were measured in this project.}};
+\end{tikzpicture}
+\end{document}

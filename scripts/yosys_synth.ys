@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Technology-mapped synthesis check for AMD 7-series (XC7A100T on Kasli 2.0).
+# This is NOT the deployment flow (that is Vivado, scripts/vivado_build.tcl):
+# no placement, no routing, no timing. It checks that the RTL is
+# synthesizable, that the herald latch maps to FDCE cells clocked by the
+# herald net, and gives a resource estimate.
+read_verilog -sv rtl/qm_pkg.sv rtl/qm_sync.sv rtl/qm_herald_latch.sv rtl/qm_edge_capture.sv rtl/qm_pulse_unit.sv rtl/qm_cfg_check.sv rtl/qm_sequencer.sv rtl/qm_fifo.sv rtl/qm_regs.sv rtl/qm_uart.sv rtl/qm_core.sv rtl/vendor/xilinx7/qm_xilinx7_io.sv rtl/qm_top.sv
+synth_xilinx -family xc7 -top qm_top -flatten -nosrl
+tee -o build/yosys_stat.txt stat
+select -list t:FDCE %x:+[C] t:FDCE %d
+write_verilog -noattr build/qm_top_yosys.v

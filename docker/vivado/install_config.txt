@@ -1,0 +1,15 @@
+#### Vivado ML Standard - batch install configuration (7-series only)
+# Generated format follows `xsetup -b ConfigGen`. Regenerate with the
+# installer you actually use (`xsetup -b ConfigGen`), since the module list
+# changes between releases. This file is a starting point, UNTESTED.
+Edition=Vivado ML Standard
+Product=Vivado
+Destination=/opt/Xilinx
+Modules=Artix-7:1,Kintex-7:0,Spartan-7:0,Zynq-7000:0,Virtex UltraScale+:0,Kintex UltraScale:0,Kintex UltraScale+:0,Zynq UltraScale+ MPSoC:0,Versal:0,DocNav:0,Install Devices for Kria SOMs and Starter Kits:0,Vitis Model Composer:0
+InstallOptions=Acquire or Manage a License Key:0,Enable WebTalk for Vivado to send usage statistics to AMD (Always enabled for WebPACK license):0
+CreateProgramGroupShortcuts=0
+ProgramGroupFolder=Xilinx Design Tools
+CreateShortcutsForAllUsers=0
+CreateDesktopShortcuts=0
+CreateFileAssociation=0
+EnableDiskUsageOptimization=1
