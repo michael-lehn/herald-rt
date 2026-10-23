@@ -42,7 +42,7 @@ clocks/bit.
 | T7b | 1.2 ns herald: accepted normally |
 | T8 | 24 random herald phases relative to the clock (ps resolution): offset always in (0, 1 ns]. Prints quantization statistics. |
 | T9 | Herald while clears are released but arm still low: no effect, not accepted |
-| T10 | Herald exactly at the arm edge: resolved consistently (accepted ⇔ pulses) |
+| T10 | Herald exactly at the arm edge: resolved consistently (accepted ⇔ pulses). Simulation has zero skew between the herald flops, so this does not cover the physical inter-channel race (docs/05 §3.3). |
 | T10b | Herald 1.5 ns **before** arm: seen in the guard band, latch not fired, counted as race, still armed |
 | T11 | **System clock stopped**: herald still switches pump/repump/source/fwd and the state holds. After restart, the unseen herald is flagged and the system recovers. |
 | T12 | Host abort inside the active window: read-out cancelled, beams restored |

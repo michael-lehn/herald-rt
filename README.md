@@ -121,9 +121,20 @@ output logic in [`qm_core.sv`](rtl/qm_core.sv)):
 - **Arm, trigger, re-arm.** The flops are armed through their clock enable (`arm`)
   and cleared through their asynchronous clear, both driven by synchronous logic.
   Clears change only while `arm` is low, so a herald at a clear release is
-  harmless. The remaining race, a herald inside `arm`'s setup/hold window, is
-  resolved consistently because Path B treats the *synchronised `fired` flag* as
-  the single truth.
+  harmless.
+- **The arming race is only partly resolved.** Path A consists of four independent
+  herald-clocked flip-flops (three kill flops and `fired`), each sampling `arm`.
+  A herald edge inside `arm`'s setup/hold window, widened by the routed skew of
+  `arm` between these flops, can set some of them but not others.
+  - *Synchronous state:* consistent. The sequencer decides acceptance only from
+    the synchronised `fired` flag, so counters, time stamps and the scheduled
+    pulses agree with one decision.
+  - *Physical Path A outputs:* **not guaranteed consistent.** A beam can stay on
+    during an accepted attempt, or switch off without one and stay off until a
+    later cycle clears it. The gateware does not detect this; simulation cannot
+    show it (zero skew). This is an open hardware issue
+    ([docs/05 §3.3](docs/05_hardware_readiness.md)). The proposed fix, deriving
+    all outputs from one master flip-flop, is not implemented.
 - **Risks of an asynchronous clock:** metastability at the arming edge, a minimum
   pulse width, clock-enable skew between flops, and limited open-source timing
   analysis. All are analysed in [docs/05](docs/05_hardware_readiness.md).
@@ -162,6 +173,18 @@ observes.
 *Figure 4 – One storage-and-retrieval cycle, reconstructed from the paper and the HeraldRT register defaults. Tags: P published, D derived from the paper, C configurable, A assumption. Not a measurement.*
 
 ## 5. Hardware platform
+
+> [!WARNING]
+> **The current bitstream is not approved for use with connected laboratory
+> equipment.** Two board-level issues must be resolved first:
+> - **Missing LVDS input termination:** the open-source bitstream cannot enable
+>   the FPGA's internal LVDS termination (DIFF_TERM), so the herald input operates
+>   outside the receiver's specified conditions.
+> - **Undefined outputs during configuration:** while the FPGA is unconfigured,
+>   being configured or reloaded, the DIO-MCX outputs can be undefined and might
+>   trigger connected equipment.
+>
+> Full analysis and bring-up procedure: [docs/05](docs/05_hardware_readiness.md).
 
 | Item | Selection |
 |---|---|
@@ -258,6 +281,9 @@ make openxc7        # synthesis, P&R, bitstream, Path A review
 make figures        # rebuild documentation figures (LuaLaTeX + TikZ -> SVG)
 ```
 
+The generated bitstream is for bench bring-up only, not for operation with
+connected equipment (see the [warning in §5](#5-hardware-platform)).
+
 Vivado (x86-64 Linux, local or over SSH) and programming are covered in
 [docs/04](docs/04_build_environments.md) and [docs/03](docs/03_verification_and_validation.md).
 
@@ -287,9 +313,10 @@ on rising(herald) {
 }
 ```
 
-A compiler would then generate experiment-specific FPGA logic from it. Each
-construct already corresponds to a hardware mechanism in HeraldRT, with its own
-timing class:
+A compiler would then generate experiment-specific FPGA logic from it. The
+compiler must preserve not only the logical behaviour of an experiment, but also
+its physical timing requirements. Each construct already corresponds to a hardware
+mechanism in HeraldRT, with its own timing class:
 
 | Construct | Mechanism | Timing class |
 |---|---|---|

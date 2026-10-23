@@ -40,13 +40,14 @@
   \draw[elec, line width = 1.25pt] (kill) -- (olut);
   \draw[elec, line width = 1.25pt] (olut) -- (obuf);
 
-  \coordinate (Atop) at (8.0, 5.05);
+  \coordinate (Atop) at (8.0, 5.3);
   \begin{pgfonlayer}{domains}
     \node[domain async, fit = (bufg) (kill) (olut) (obuf) (gray) (Atop), inner ysep = 3.5mm,
           inner xsep = 4mm] (pathA) {};
   \end{pgfonlayer}
-  \node[domain label, anchor = north west, text = asyncline] at ($(pathA.north west) + (0.05, -0.08)$)
-       {Path A -- direct reaction\\[-1pt]{\scriptsize\mdseries herald is the clock: no clk\_sys edge, no CPU}};
+  \node[domain label, font = \normalsize\bfseries, anchor = north west, text = asyncline]
+       at ($(pathA.north west) + (0.05, -0.06)$)
+       {Path A -- direct reaction\\[-1pt]{\footnotesize\mdseries herald is the clock: no clk\_sys edge, no CPU}};
   \node[file, anchor = south east] at ($(pathA.south east) + (-0.1, 0.08)$) {qm\_herald\_latch.sv};
 
   % ============================================================ Path B (clk_sys domain)
@@ -67,13 +68,14 @@
   \draw[elec, <->] (seq) -- (regs);
   \draw[elec, <->] (regs) -- (uart);
 
-  \coordinate (Bbot) at (8.0, -7.0);
+  \coordinate (Bbot) at (8.0, -7.25);
   \begin{pgfonlayer}{domains}
     \node[domain sync, fit = (cap) (sync) (seq) (pulse) (oser) (regs) (uart) (Bbot), inner ysep = 3.5mm,
           inner xsep = 4mm] (pathB) {};
   \end{pgfonlayer}
-  \node[domain label, anchor = south west, text = syncline] at ($(pathB.south west) + (0.05, 0.08)$)
-       {Path B -- acquisition and sequencing\\[-1pt]{\scriptsize\mdseries clk\_sys \SI{125}{MHz}; input and output serdes at \SI{1}{GS/s}}};
+  \node[domain label, font = \normalsize\bfseries, anchor = south west, text = syncline]
+       at ($(pathB.south west) + (0.05, 0.06)$)
+       {Path B -- acquisition and sequencing\\[-1pt]{\footnotesize\mdseries clk\_sys \SI{125}{MHz}; input and output serdes at \SI{1}{GS/s}}};
 
   % ============================================================ domain crossings
   \draw[elec] ($(kill.south west) + (1.25, 0)$) -- node[right, tag, pos = 0.42] {kill, fired}
@@ -120,7 +122,7 @@
   \draw[draw = proposed, line width = 0.7pt, dash pattern = on 3pt off 2pt, ->] (artiq) -- (hostpc);
 
   % ============================================================ legend
-  \begin{scope}[shift = {(-3.8, -8.25)}]
+  \begin{scope}[shift = {(-3.8, -8.5)}]
     \draw[elec] (0, 0) -- (0.9, 0) node[right, tag, text = ink] {logic / electrical signal};
     \draw[ctrl] (4.6, 0) -- (5.5, 0) node[right, tag, text = ink] {control output};
     \draw[cfg]  (8.3, 0) -- (9.2, 0) node[right, tag, text = ink] {static configuration};

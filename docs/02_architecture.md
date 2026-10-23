@@ -56,8 +56,14 @@ Why this structure, and not the alternatives:
    rising edge at CE.
    - Q may go metastable. In that rare case the immediate outputs may show extra
      settling delay.
-   - Path B treats the synchronized `fired` flag as the single truth, so the two
-     paths cannot disagree about whether the attempt started.
+   - Path B decides whether the attempt started only from the synchronized
+     `fired` flag, so the *synchronous* state (sequencer, counters, time stamps,
+     scheduled pulses) is always consistent.
+   - This does **not** make the *physical* Path A outputs consistent. The three
+     kill flops and `fired` sample `arm` independently, and `arm` reaches them with
+     routed skew. A herald in that window can set only some of them, and nothing
+     in the gateware detects or corrects this (docs/05 §3.3). Open issue; the
+     single-master-flip-flop fix is proposed, not implemented.
    - The serdes timestamp is paired with the attempt only if the latch fired.
    - An edge that the serdes saw but the latch did not take is counted as a
      **race** (`CNT_RACE`).
