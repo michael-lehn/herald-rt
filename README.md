@@ -41,12 +41,13 @@ later.
   *heralds* that a signal photon now exists and is on its way. The click is a
   random, asynchronous electrical pulse. It is the event this project is about.
 - **Optical delay.** The signal photon travels through about 60 m of fibre and
-  reaches the memory **≈ 270 ns** after the herald. Those 270 ns are the whole
-  time budget the electronics have to react.
+  reaches the memory **≈ 270 ns** after the herald. Within these 270 ns the
+  electronics must switch the preparation beams off and trigger the first
+  control pulse.
 - **Memory.** Before a photon can be stored, pump and repump lasers prepare the
-  atoms in one quantum state for **at least 2 µs**. These beams must be **off**
-  while a photon is stored; otherwise they add noise and destroy the stored
-  state.
+  atoms in one quantum state for **at least 2 µs**. After a herald, these beams
+  are switched off until the photon has been retrieved; the paper prioritises
+  this switching to minimise noise.
   - A strong optical **control pulse (3.77 ns FWHM)** maps the arriving photon
     into the atoms.
   - A second control pulse after the **storage time** (160 ns in the paper's main
@@ -54,18 +55,23 @@ later.
 - **Source switching.** A Pockels cell also switches the photon source off
   during retrieval, to suppress unrelated background photons.
 
-The paper performs this cycle about 1.5 × 10⁵ times per second. Its herald
-reaction uses a commercial digital delay generator with 21 ns insertion delay and
-< 35 ps RMS jitter.
+The paper performs this cycle about 1.5 × 10⁵ times per second. A herald
+triggers a commercial digital delay generator (Highland T564, 21 ns insertion
+delay, < 35 ps RMS jitter), which switches off pump, repump and source. A second
+delay generator triggers the control-pulse generation. The paper reports that
+the alignment of control pulse and photon is limited mainly by the > 350 ps
+jitter of the idler detector. It estimates that this reduces the efficiency by a
+factor of < 0.90(5), and measures the remaining control-pulse jitter, excluding
+the idler detection, as 126(3) ps.
 
 ## 2. The timing challenge
 
 The experiment needs two very different kinds of timing:
 
-| Requirement | What matters | Order of magnitude |
+| Requirement | What matters | What the paper gives |
 |---|---|---|
-| **Shut off** pump, repump and source after a herald, and keep them off until retrieval | A short, *reliable* latency and a persistent state after a ~10 ns pulse | Tens of ns. In the paper the light is effectively off ≈ 60–140 ns after the herald, dominated by the optical switches. |
-| **Align** the control pulses with the photon | Low jitter of the pulse relative to the herald | Well below the detector's > 350 ps jitter; the paper's chain reached 126 ps |
+| **Shut off** pump, repump and source after a herald, and keep them off until retrieval | A short, *reliable* latency and a persistent state after a ~10 ns pulse | A DDG with 21 ns insertion delay. The source is off ≈ 140 ns after the herald (text); pump and repump are off ≈ 60–115 ns after it (read from Fig. 4). The optical switches dominate. |
+| **Align** the control pulses with the photon | Low jitter of the pulse relative to the herald | No numerical requirement. Idler detector > 350 ps (dominant), rest of the chain 126(3) ps. |
 
 This distinction drives the whole design:
 - **Not every operation needs picosecond precision.** The shutdown only has to be
@@ -76,6 +82,17 @@ This distinction drives the whole design:
 - **Electrical edges are not optical edges.** SOAs, Pockels cells and EOMs add
   their own latencies. Each output must therefore be calibrated against the
   light it controls.
+
+**What is and is not established about the alignment requirement.**
+- HeraldRT uses a target of **≤ 100 ps RMS added controller jitter**
+  ([docs/01](docs/01_requirements_and_hardware.md), row 28). This is an
+  *engineering assumption*: added in quadrature to the 350 ps detector jitter it
+  increases the total by less than 4 % (√(350² + 100²) ≈ 364 ps). The paper
+  states no such threshold.
+- Whether the ≈ 289 ps RMS quantisation of Tier 1 (below) would measurably
+  reduce the storage efficiency is **not established**. The question needs a
+  measurement on the experiment, for example the efficiency as a function of a
+  known added control-pulse jitter.
 
 The [timing diagram](#figure-4) shows one complete cycle.
 
@@ -142,11 +159,16 @@ output logic in [`qm_core.sv`](rtl/qm_core.sv)):
 **Path B — acquisition and control** (synchronous, 125 MHz system clock):
 - An input serdes samples the herald at 1 GS/s, giving **1 ns time stamps**.
   [`qm_edge_capture.sv`](rtl/qm_edge_capture.sv)
-- A Gray-coded counter, itself clocked by the herald, counts *every* edge,
-  including pulses too short to be sampled. The edge counts reconcile exactly:
-  `edges = accepted + rejected + race`, and `raw = edges + unseen`.
+- A Gray-coded counter, itself clocked by the herald, counts herald edges in
+  every state, including edges the serdes may miss (within the flip-flops'
+  minimum pulse width). It is a diagnostic and does not influence any control
+  decision. In simulation the counters reconcile:
+  `edges = accepted + rejected + race`, and `raw = edges + unseen`. On hardware
+  the second identity holds only if every edge missed by the serdes arrives
+  while armed.
 - The **sequencer** ([`qm_sequencer.sv`](rtl/qm_sequencer.sv)):
-  - enforces the ≥ 2 µs preparation and rejects heralds while not armed;
+  - enforces a programmable minimum preparation time (default 2 µs, the
+    paper's value) and rejects heralds while not armed;
   - pairs the accepted herald with its time stamp;
   - schedules the read-in / read-out triggers on a 1 ns output grid
     ([`qm_pulse_unit.sv`](rtl/qm_pulse_unit.sv));
@@ -164,9 +186,35 @@ observes.
 
 | Tier | Mechanism | Status |
 |---|---|---|
-| 0 | Forward the gated herald (`HERALD_FWD`) to an external delay generator, as in the paper | Output implemented; external DDG required |
-| 1 | FPGA-generated triggers on a 1 ns serdes grid (≈ 289 ps RMS quantisation) | **Implemented and simulated.** Not precise enough for final photon alignment. |
-| 2 | TDC phase measurement plus an external programmable delay line (e.g. MC100EP195B, 10 ps steps) | **Proposal only** |
+| 0 | Forward the gated herald (`HERALD_FWD`) to an external delay generator, as in the paper | Output implemented and simulated; external DDG required. Jitter of the forwarding path not measured. |
+| 1 | FPGA-generated triggers on a 1 ns serdes grid | **Implemented and simulated.** ≈ 289 ps RMS quantisation (T/√12), a property of the architecture, not a measurement. Adequacy for photon alignment not established (§2). |
+| 2 | Herald phase measurement (TDC) plus a fine output delay: an external programmable delay line on Kasli (e.g. MC100EP195B, 10 ps steps), or an FPGA with runtime-programmable output delays | **Proposal only.** Nothing implemented. |
+
+### Fine timing on the current hardware: findings so far
+
+These findings come from datasheets and toolchain sources, not from
+measurements.
+- **The Kasli outputs are limited to the serdes grid.** The Artix-7 has only
+  HR I/O banks, which have no output delay element (ODELAYE2; AMD UG953). An
+  output edge can only be placed by OSERDESE2, at most 1250 Mb/s at speed
+  grade -3 (DS181). That is an 800 ps grid, ≈ 231 ps RMS, against 1 ns now.
+- **A TDC alone does not remove output quantisation.** A carry-chain TDC can
+  measure the herald phase, but the pulse still lands on the output grid. Tier 2
+  needs both the phase measurement and a fine output delay.
+- **Board buffers need calibration.** The DIO-MCX output path has propagation
+  delays of several ns with part-to-part spread: the SN65MLVD040 receiver is
+  specified at 2.5–6 ns, the 74LVT162245 at 1–4 ns. Its added jitter is
+  unmeasured.
+- **Alternative under consideration.** Some FPGA families have runtime-loadable
+  output delays that compensate for voltage and temperature. An example is
+  ODELAYE3 in TIME mode in the HP banks of the AMD UltraScale+ families (UG861).
+  The AMD SCU35 evaluation kit (Spartan UltraScale+ XCSU35P) brings an HP bank
+  out to its expansion connector (UG1713).
+  - It is a **candidate for a bench evaluation only**: not selected, not
+    purchased, and no RTL has been ported.
+  - It would still need a herald TDC, an analogue front end for the SPAD input
+    and the 50 Ω outputs, and Vivado. openXC7 does not support UltraScale+.
+  - Its achievable end-to-end precision is unknown.
 
 <a id="figure-4"></a>
 ![Timing diagram](docs/figures/timing.svg)
@@ -196,6 +244,9 @@ observes.
 - a mature FPGA architecture and free tools;
 - laboratory-grade digital I/O without a custom PCB;
 - the same hardware ecosystem as ARTIQ, which gives a path to later integration.
+
+**Limitation:** the Artix-7 has no output delay element, so FPGA-generated
+control pulses on the DIO-MCX outputs are limited to the serdes grid (§4).
 
 HeraldRT runs as a **dedicated bitstream**; its critical path does not depend on
 the ARTIQ runtime. Pin assignments were checked against the Kasli v2.0.2
@@ -299,7 +350,13 @@ Vivado (x86-64 Linux, local or over SSH) and programming are covered in
    inter-channel arming race.
 5. Bench bring-up, then latency and jitter measurement with a ps-class time tagger
    ([docs/05](docs/05_hardware_readiness.md) §5).
-6. Tier 2 fine timing, if the measured alignment requires it.
+6. Establish the alignment requirement experimentally: the sensitivity of the
+   storage efficiency to added control-pulse jitter (§2). Until then Tier 0
+   remains the precision option.
+7. Only if that measurement requires it, evaluate Tier 2:
+   - an external delay line on Kasli;
+   - or an FPGA with runtime output delays, starting with a bench test of
+     ODELAYE3 and a carry-chain TDC on the SCU35.
 
 ## 10. Future work: a DSL for event-driven hardware
 
@@ -364,6 +421,9 @@ are in [NOTICE](NOTICE).
 - openXC7 toolchain: <https://github.com/openXC7> ·
   Project X-Ray: <https://github.com/f4pga/prjxray>
 - AMD DS181, *Artix-7 FPGAs Data Sheet: DC and AC Switching Characteristics*.
+- AMD UG953, *Vivado Design Suite 7 Series FPGA and Zynq 7000 SoC Libraries
+  Guide* (ODELAYE2 availability). AMD UG861, *UltraScale Architecture SelectIO
+  Resources* (ODELAYE3). AMD UG1713, *SCU35 Evaluation Board User Guide*.
 
 ---
 

@@ -116,7 +116,7 @@ output driver. The FPGA part is bounded by STA (`path_a.rpt`, XDC requirement
 | Tier | Mechanism | Added jitter (expected) | Status |
 |---|---|---|---|
 | **0** | HERALD_FWD (Path A, gated) → existing DDG (T564/DG645) → PPG512 | FPGA async path (few ps, to be measured) + DDG (< 35 ps per T564 spec) | **Available now.** Hardware rejection, arming and diagnostics come from the FPGA. |
-| **1** | FPGA serdes: herald sampled at 1 GS/s, CTRL_A/B placed on a 1 ns output grid | ≈ 289 ps RMS (quantization) + serdes/clock jitter | **Implemented, simulated.** Bring-up and non-critical triggers. Not adequate for photon alignment (budget ≤ 100 ps). |
+| **1** | FPGA serdes: herald sampled at 1 GS/s, CTRL_A/B placed on a 1 ns output grid | ≈ 289 ps RMS (quantization) + serdes/clock jitter | **Implemented, simulated.** Bring-up and non-critical triggers. Exceeds the ≤ 100 ps engineering target (docs/01 row 28); whether it is adequate for photon alignment is not established. |
 | **2** | Tier 1 plus a carry-chain TDC on the herald (fine phase, ~15–25 ps bins after calibration) and an external **MC100EP195B** programmable delay per output (10 ps steps, parallel load, 10 ns range), loaded per shot with `(1 ns − phase)` | Target ≤ 30 ps RMS, set by TDC nonlinearity and delay-line INL after calibration | **Design only.** Custom EEM board needed. |
 
 Why not use the FPGA's own delay primitives for Tier 2 on Kasli:

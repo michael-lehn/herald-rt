@@ -126,13 +126,17 @@ register has to be calibrated against the optical response (docs/03 §4).
    the reaction is guaranteed, persistent, and not quantized to a clock period that
    could add 8 ns of random delay.
 2. **Control-pulse alignment (the precision problem).** The 3.77 ns control pulse
-   must hit a photon of about 1 ns duration at a fixed offset from the herald. The
-   added jitter has to stay well below the 350 ps SPAD jitter, so the target is
-   ≤ 100 ps RMS. An FPGA timer that counts clock cycles from an asynchronous event
-   adds a uniform quantization error of one period, with RMS = T/√12:
-   - 8 ns system clock: 2.3 ns RMS. Unusable.
-   - 1 ns serdes grid (this prototype, Tier 1): 289 ps RMS. Measurable degradation.
-     Adequate for bring-up, not for the photon experiment.
+   must hit a photon of about 1 ns duration at a fixed offset from the herald.
+   The paper gives no numerical jitter requirement. It reports that the alignment
+   is limited mainly by the > 350 ps SPAD jitter, with 126(3) ps from the rest of
+   the chain. HeraldRT therefore uses an **engineering target** of ≤ 100 ps RMS
+   added jitter (row 28). The physical need for this target is not established.
+   An FPGA timer that counts clock cycles from an asynchronous event adds a
+   uniform quantization error of one period, with RMS = T/√12:
+   - 8 ns system clock: 2.3 ns RMS. Far outside the target.
+   - 1 ns serdes grid (this prototype, Tier 1): 289 ps RMS. Exceeds the target.
+     Adequate for bring-up. Whether it measurably reduces the storage efficiency
+     has not been determined; that needs a measurement on the experiment.
    - Reaching ≤ 100 ps needs either the herald phase to be measured (TDC) and the
      output corrected with a fine delay line (Tier 2), or the herald forwarded to a
      dedicated DDG, as in the paper (Tier 0). See docs/02 §4.
@@ -164,7 +168,7 @@ from 2022. Verify current stock with the distributor before ordering.
 | ARTIQ integration | **Native**: same board, same EEM cards; the core can later become an ARTIQ PHY (docs/02 §6) | none | none | none |
 | Complexity | Low: no custom PCB for Tier 1 | Medium: custom FMC I/O board | Medium–high | High |
 | Meets Path A? | Yes (est. ≤ 25 ns incl. buffers, to be measured) | Yes | Yes | Likely |
-| Meets ≤100 ps alignment? | Only with Tier 0 (external DDG) or Tier 2 (TDC + external fine delay EEM) | same | Partly: ODELAY gives ~78 ps output taps, but range 2.5 ns plus calibration | same as A |
+| Meets the ≤ 100 ps target (assumption, row 28)? | Only with Tier 0 (external DDG) or Tier 2 (TDC + external fine delay EEM) | same | Partly: ODELAY gives ~78 ps output taps, but range 2.5 ns plus calibration | same as A |
 
 **Option E – FPGA plus commercial DDG (the paper's architecture).** The FPGA does
 arming, rejection, sequencing and diagnostics. A T564 or SRS DG645 does the
@@ -192,7 +196,8 @@ Reasons:
   (docs/02 §4), plugged into the same Kasli. This matches the "custom board
   integrating input and output electronics" direction.
 
-What it does **not** solve on its own: sub-100 ps alignment of the control pulse.
+What it does **not** solve on its own: control-pulse alignment within the
+≤ 100 ps engineering target.
 That needs Tier 0 (existing T564/PPG chain driven by HERALD_FWD) or Tier 2.
 
 Fallback: AC701 with a custom FMC I/O board, if Kasli hardware cannot be obtained.
@@ -250,7 +255,7 @@ not included and must be quoted.
 | 10 | Time tagger | Swabian Instruments **Time Tagger X** (≈ 2 ps RMS) or Time Tagger Ultra (Performance edition); the lab's quTAU (81 ps bins) is **not** sufficient for ps-level jitter | 1 | Jitter / drift statistics | https://www.swabianinstruments.com |
 | 11 | Fast photodiode | Thorlabs **DET025A** (2 GHz, Si) | 2 | Optical response of SOAs / EOM | https://www.thorlabs.com |
 | 12 | Temperature logging | thermocouple logger at Kasli and DIO-MCX | 1 | Drift vs. temperature | – |
-| 13 | **Tier 2 only** – custom EEM fine-timing board | onsemi **MC100EP195B** (programmable delay, 10 ps steps, 10-bit parallel), Analog Devices **ADCMP600** class comparator, threshold DAC | – | ≤ 100 ps alignment | https://www.onsemi.com/products/clocks-timing/clock-generation/programmable-delay-lines |
+| 13 | **Tier 2 only** – custom EEM fine-timing board | onsemi **MC100EP195B** (programmable delay, 10 ps steps, 10-bit parallel), Analog Devices **ADCMP600** class comparator, threshold DAC | – | ≤ 100 ps alignment target (assumption, row 28) | https://www.onsemi.com/products/clocks-timing/clock-generation/programmable-delay-lines |
 
 ## 6. Minimal hardware architecture
 
@@ -278,4 +283,4 @@ Which part of the design uses which timing technique:
 | Polarity, masking | **Combinational** (one LUT after the flop) | No state needed |
 | Arming, clearing, restore times, preparation timer | **Synchronous FSM** (8 ns) | Tolerates clock quantization (optical response is 40–120 ns) |
 | Herald timestamp, counters | Synchronous + **serdes oversampling** (1 ns) | Diagnostics, scheduling |
-| Control-pulse triggers | Serdes **1 ns grid** (Tier 1), external DDG (Tier 0) or TDC + external fine delay (Tier 2) | The only path that needs ≤ 100 ps |
+| Control-pulse triggers | Serdes **1 ns grid** (Tier 1), external DDG (Tier 0) or TDC + external fine delay (Tier 2) | The only path to which the ≤ 100 ps target (assumption) applies |
