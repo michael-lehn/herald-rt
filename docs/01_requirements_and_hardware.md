@@ -143,8 +143,13 @@ register has to be calibrated against the optical response (docs/03 §4).
 3. **Arming race.** The re-arm moment and a random herald edge can coincide
    (~1.5 × 10⁵ arm events/s × 1.5 × 10⁵ heralds/s × window). The two paths must
    always agree on whether that herald started an attempt.
-4. **No silent loss.** Every herald edge must be counted, and every accepted herald
-   timestamped, even pulses shorter than the 1 ns sampling grid.
+4. **Reliable capture of an eligible herald.** A herald that arrives while the
+   controller is armed must start the attempt, and that accepted herald must be
+   timestamped for scheduling. A pulse too short for the 1 ns sampling grid must
+   not go unnoticed; HeraldRT flags it as no-edge and aborts the cycle.
+   Counting *all* raw herald edges, including those while not armed, is a
+   separate diagnostic goal of HeraldRT (docs/02 §3). It has not been
+   established that the experiment requires lossless counting of every event.
 
 ## 3. Candidate platforms
 

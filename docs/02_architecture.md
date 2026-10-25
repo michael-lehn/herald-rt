@@ -85,12 +85,18 @@ output driver. The FPGA part is bounded by STA (`path_a.rpt`, XDC requirement
 
 - **Serdes timestamp.** 1 GS/s samples, 1 ns resolution, ±0.5 ns quantization
   (289 ps RMS). Timestamps are in the "phys ns" frame defined in `qm_pkg.sv`.
-- **Raw edge counter.** A 4-bit Gray counter clocked by the herald itself counts
-  *every* edge, including sub-nanosecond pulses and edges while the system clock is
-  stopped. It is synchronized to clk_sys (only one bit changes per edge).
+- **Raw edge counter (diagnostic).** A 4-bit Gray counter clocked by the herald
+  itself counts edges in every state, including sub-nanosecond pulses (within the
+  flip-flops' minimum pulse width) and edges while the system clock is stopped.
+  It is synchronized to clk_sys (only one bit changes per edge). It does not
+  influence any control decision. Lossless counting of all edges is an
+  engineering goal, not an established requirement of the experiment
+  (docs/01 §2).
 - **Accounting invariant, checked by the testbench:**
   `CNT_EDGE = CNT_ACC + CNT_REJ + CNT_RACE` and `CNT_RAW = CNT_EDGE + CNT_NOEDGE`.
-  No herald disappears without a counter changing.
+  In simulation, no herald disappears without a counter changing. On hardware the
+  second identity holds only if every edge missed by the serdes arrives while
+  armed.
 - **FIFO.** 64 entries of accepted-herald timestamps, with an overflow counter.
   The UART (≈ 10 kB/s effective) cannot stream 1.5 × 10⁵ timestamps/s. Science
   data stays on the external time tagger. A faster link (Ethernet, or ARTIQ RTIO
