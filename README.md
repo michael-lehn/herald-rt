@@ -400,6 +400,18 @@ towards understanding which abstractions and timing constraints they need
 | [05 Hardware readiness](docs/05_hardware_readiness.md) | schematic review, netlist and bitstream review, bring-up checklist |
 | [Figures](docs/figures/) | LuaLaTeX/TikZ sources; `make figures`, `make figures-check` |
 
+## Use of AI-assisted development
+
+HeraldRT builds on earlier investigations and manually developed prototypes from the German Aerospace Center (DLR) collaboration on real-time control of quantum-memory experiments.
+
+The project explores how experiment-specific control requirements can be implemented directly in FPGA logic, separating latency-critical asynchronous reactions from synchronous experiment sequencing.
+
+Claude has been used as a development assistant for investigating design alternatives, implementing and refining SystemVerilog modules, developing simulation tests, and improving technical documentation.
+
+The underlying experimental requirements and earlier prototypes were developed independently of AI assistance. I direct the engineering work, review the architecture and implementation, and evaluate the results against the experiment's requirements.
+
+The distinction between simulation results, synthesis and place-and-route results, and physical hardware validation is documented explicitly. HeraldRT has not yet been validated on physical hardware.
+
 ## Licence
 
 | Part | Licence |
